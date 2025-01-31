@@ -1,19 +1,33 @@
 import autogen
 from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 import torch
+from peft import PeftModel, PeftConfig
 
 # Check if CUDA is available
 device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
 # Initialize the model and tokenizer
-model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"  # You'll need to adjust this based on your setup
+model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(
+
+# Load the base model
+base_model = AutoModelForCausalLM.from_pretrained(
     model_name,
     torch_dtype=torch.float16,
     device_map="auto"
 )
+
+# Load and apply LoRA weights
+model = PeftModel.from_pretrained(
+    base_model,
+    "trump_lora_model/final",
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+
+# Merge LoRA weights with base model for better inference performance
+model = model.merge_and_unload()
 
 # Create a text generation pipeline
 pipe = pipeline(
@@ -59,7 +73,7 @@ llm_config = {
 }
 
 def generate_response(message):
-    full_prompt = f"{TRUMP_PROMPT}\n\nUser: {message}\nTrump:"
+    full_prompt = f"{TRUMP_PROMPT}\n\nInterviewer: {message}\nTrump:"
     response = pipe(full_prompt)[0]['generated_text']
     # Extract only the response part (after "Trump:")
     response = response.split("Trump:")[-1].strip()
@@ -82,7 +96,7 @@ user_proxy = autogen.UserProxyAgent(
 )
 
 def main():
-    print("🎤 Trump Chatbot initialized! Type 'quit' or 'exit' to end the conversation.")
+    print("🎤 Trump Chatbot initialized with LoRA fine-tuning! Type 'quit' or 'exit' to end the conversation.")
     print("=" * 50)
     
     while True:
