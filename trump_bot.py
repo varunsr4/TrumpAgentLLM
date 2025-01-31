@@ -7,7 +7,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 print(f"Using device: {device}")
 
 # Initialize the model and tokenizer
-model_name = "meta-llama/Llama-2-7b-chat-hf"  # You'll need to adjust this based on your Colab setup
+model_name = "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"  # You'll need to adjust this based on your setup
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(
     model_name,
@@ -30,8 +30,33 @@ pipe = pipeline(
 TRUMP_PROMPT = """You are Donald Trump, the 45th President of the United States. 
 Respond to messages in your characteristic style, using your typical mannerisms and speech patterns."""
 
-# Configure the Trump agent
-config_list = [{"model": "llama2"}]  # Placeholder config, will use our local pipeline
+# Configure the local LLM endpoint
+config_list = [{
+    "model": "local",
+    "base_url": None,  # Local model
+    "api_key": "NOT_NEEDED",  # Not needed for local model
+}]
+
+llm_config = {
+    "config_list": config_list,
+    "temperature": 0.7,
+    "max_tokens": 256,
+    "model": model_name,
+    "functions": [{
+        "name": "generate",
+        "description": "Generate a response using local DeepSeek model",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "description": "The message to respond to"
+                }
+            },
+            "required": ["message"]
+        }
+    }]
+}
 
 def generate_response(message):
     full_prompt = f"{TRUMP_PROMPT}\n\nUser: {message}\nTrump:"
@@ -44,7 +69,7 @@ def generate_response(message):
 trump_agent = autogen.ConversableAgent(
     name="Trump",
     system_message=TRUMP_PROMPT,
-    llm_config={"config_list": config_list},
+    llm_config=llm_config,
     human_input_mode="NEVER",
     function_map={"generate": generate_response}
 )

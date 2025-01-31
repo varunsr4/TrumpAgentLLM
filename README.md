@@ -13,7 +13,8 @@ This project implements a basic conversational agent that:
 1. Create a new Google Colab notebook
 2. Clone this repository:
    ```bash
-   !git clone https://github.com/[your-username]/TrumpAgentLLM.git
+   !git clone https://github.com/varunsr4/TrumpAgentLLM.git
+   !pip install autogen
    %cd TrumpAgentLLM
    ```
 
